@@ -100,10 +100,10 @@ class FreeMan:
     @classmethod
     def load_bbox2d(cls, bbox_dir, session_name):
         """Load a 2D keypoint sequence represented using COCO format."""
-    
+
         bbox_path = os.path.join(bbox_dir, f'{session_name}.npy')
         assert os.path.exists(bbox_path), f'File {bbox_path} does not exist!'
-        
+
         bboxes = np.load(bbox_path, allow_pickle=True)
         return bboxes
 
@@ -112,7 +112,7 @@ class FreeMan:
         """Load a 2D keypoint sequence represented using COCO format."""
         file_path = os.path.join(keypoint_dir, f'{session_name}.npy')
         assert os.path.exists(file_path), f'File {file_path} does not exist!'
-        
+
         data = np.load(file_path, allow_pickle=True)
         keypoints2d = data[0][key]        # (nviews, N, 17, 3)
         kpts_center = data[0]['center']
@@ -121,7 +121,7 @@ class FreeMan:
         if bbox_dir is not None:
             bbox_path = os.path.join(bbox_dir, f'{session_name}.npy')
             assert os.path.exists(bbox_path), f'File {bbox_path} does not exist!'
-            
+
             bboxes = np.load(bbox_path, allow_pickle=True)
             return keypoints2d, kpts_center, kpts_scale, bboxes
         return keypoints2d, kpts_center, kpts_scale
@@ -131,7 +131,7 @@ class FreeMan:
         """Load a 3D keypoint sequence represented using COCO format."""
         file_path = os.path.join(keypoint_dir, f'{seq_name}.npy')
         assert os.path.exists(file_path), f'File {file_path} does not exist!'
-        
+
         data = np.load(file_path, allow_pickle=True)
         if use_optim:
             return data[0]['keypoints3d_optim']                # (N, 17, 3)
