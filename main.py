@@ -1,4 +1,11 @@
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# 指定中文字体文件路径（请根据您的系统更改路径）
+font_path = '/System/Library/Fonts/PingFang.ttc'  # macOS 上的一个中文字体
+prop = fm.FontProperties(fname=font_path)
+
+plt.rcParams['font.family'] = prop.get_name()
 
 # 定义骨骼连接
 connections = [
@@ -39,34 +46,51 @@ def visualize_joints(joints):
     plt.title('3D Joint Positions')
     plt.show()
 
-def animate_3d_poses(joints):
+def animate_3d_poses(joints, transform_matrix=[2, 0, 1], scale_factor=[1, 1, -1]):
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
 
+    # 创建45度旋转矩阵
+    import numpy as np
+    rotation_angle = np.pi / 2  # 90度
+    rotation_matrix = np.array([
+        [np.cos(rotation_angle), -np.sin(rotation_angle), 0],
+        [np.sin(rotation_angle), np.cos(rotation_angle), 0],
+        [0, 0, 1]
+    ])
+
+    transformed_joints = joints[:, :, transform_matrix] * scale_factor
+    transformed_joints = np.dot(transformed_joints.reshape(-1, 3), rotation_matrix).reshape(transformed_joints.shape)
     # 初始化散点
-    scat = ax.scatter(joints[0, :, 2], joints[0, :, 0], -joints[0, :, 1])
+    scat = ax.scatter(transformed_joints[0, :, 0], transformed_joints[0, :, 1], transformed_joints[0, :, 2])
     # 初始化线条
     lines = [ax.plot([], [], [], 'b-')[0] for _ in connections]
 
     # 设置初始视角
     ax.view_init(elev=10, azim=45)
 
+    # 设置坐标轴标签
+    ax.set_xlabel('X轴')
+    ax.set_ylabel('Y轴')
+    ax.set_zlabel('Z轴')
+
     # 更新函数
     def update(frame, scat, lines):
         # 更新散点位置
-        scat._offsets3d = (joints[frame, :, 2], joints[frame, :, 0], -joints[frame, :, 1])
+        transformed_joint = transformed_joints[frame, :, :]
+        scat._offsets3d = (transformed_joint[:, 0], transformed_joint[:, 1], transformed_joint[:, 2])
 
         # 更新线条
         for line, connection in zip(lines, connections):
             start, end = connection
-            line.set_data([joints[frame, start, 2], joints[frame, end, 2]],
-                        [joints[frame, start, 0], joints[frame, end, 0]])
-            line.set_3d_properties([-joints[frame, start, 1], -joints[frame, end, 1]])
+            line.set_data([transformed_joint[start, 0], transformed_joint[end, 0]],
+                        [transformed_joint[start, 1], transformed_joint[end, 1]])
+            line.set_3d_properties([transformed_joint[start, 2], transformed_joint[end, 2]])
 
         # 获取当前帧的坐标范围
-        x_min, x_max = joints[frame, :, 2].min(), joints[frame, :, 2].max()
-        y_min, y_max = joints[frame, :, 0].min(), joints[frame, :, 0].max()
-        z_min, z_max = (-joints[frame, :, 1]).min(), (-joints[frame, :, 1]).max()
+        x_min, x_max = transformed_joint[:, 0].min(), transformed_joint[:, 0].max()
+        y_min, y_max = transformed_joint[:, 1].min(), transformed_joint[:, 1].max()
+        z_min, z_max = (transformed_joint[:, 2]).min(), (transformed_joint[:, 2]).max()
 
         # 计算坐标范围的中心和宽度
         center_x, width_x = (x_min + x_max) / 2, x_max - x_min
@@ -78,6 +102,11 @@ def animate_3d_poses(joints):
         ax.set_xlim(center_x - max_width/2, center_x + max_width/2)
         ax.set_ylim(center_y - max_width/2, center_y + max_width/2)
         ax.set_zlim(center_z - max_width/2, center_z + max_width/2)
+
+        # 确保坐标轴标签始终可见
+        ax.set_xlabel('X轴')
+        ax.set_ylabel('Y轴')
+        ax.set_zlabel('Z轴')
 
         return scat, *lines
 
@@ -91,9 +120,9 @@ def animate_3d_poses(joints):
 # 假设我们已经加载了SMPL参数
 import os
 base_dir = os.environ.get("FREEMAN_DATASET_BASE_DIR")
-motion_dir = "/Users/yanyuming/Downloads/FreeMan/30FPS/motions"
-seq_name = f"20220619_f35f5a8e02_subj19_view0"
-model_path = "/Users/yanyuming/Downloads/models/smpl"
+motion_dir = os.environ.get("FREEMAN_DATASET_MOTION_DIR")
+seq_name = os.environ.get("FREEMAN_DATASET_SEQ_NAME")
+model_path = os.environ.get("SMPL_MODEL_PATH")
 
 from freeman_loader import FreeMan
 smpl_poses, smpl_scaling, smpl_trans = FreeMan(base_dir=base_dir) \
@@ -124,4 +153,4 @@ print("joints", joints.shape)
 # visualize_joints(joints)
 
 # 创建动画
-animate_3d_poses(joints)
+animate_3d_poses(joints, transform_matrix=[2, 0, 1])
